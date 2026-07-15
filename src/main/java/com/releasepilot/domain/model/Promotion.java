@@ -38,19 +38,19 @@ public class Promotion {
     /**
      * Requests a new Promotion from the given source Environment to the given target Environment.
      *
-     * <p>Skipping the {@code STAGING} environment when promoting from {@code DEV} directly
-     * to {@code PRODUCTION} is not allowed.</p>
+     * <p>The transition from source to target must be a valid, forward, single-step
+     * environment transition as defined by {@link Environment#canTransitionTo(Environment)}.</p>
      *
      * @param applicationId the identifier of the application being promoted
      * @param version       the version of the application being promoted
      * @param source        the source environment
      * @param target        the target environment
      * @return a new {@link Promotion} instance in {@link PromotionStatus#REQUESTED} status
-     * @throws DomainException if the requested transition skips the STAGING environment
+     * @throws DomainException if the requested environment transition is not allowed
      */
     public static Promotion request(ApplicationId applicationId, Version version, Environment source, Environment target) {
-        if (source == Environment.DEV && target == Environment.PRODUCTION) {
-            throw new DomainException("Cannot promote directly from DEV to PRODUCTION: STAGING environment must not be skipped");
+        if (!source.canTransitionTo(target)) {
+            throw new DomainException("Cannot promote directly from " + source + " to " + target);
         }
 
         PromotionId id = new PromotionId(UUID.randomUUID().toString());
@@ -61,15 +61,11 @@ public class Promotion {
      * Approves this Promotion.
      *
      * @param approver the identifier of the approver
-     * @throws DomainException if the current status is a terminal state (CANCELLED or COMPLETED)
-     *                          or if the Promotion is already APPROVED
+     * @throws DomainException if the current status cannot transition to APPROVED
      */
     public void approve(String approver) {
-        if (status == PromotionStatus.CANCELLED || status == PromotionStatus.COMPLETED) {
-            throw new DomainException("Cannot approve a Promotion in terminal status: " + status);
-        }
-        if (status == PromotionStatus.APPROVED) {
-            throw new DomainException("Promotion is already approved");
+        if (!status.canTransitionTo(PromotionStatus.APPROVED)) {
+            throw new DomainException("Cannot approve promotion. Current status is " + status);
         }
         this.status = PromotionStatus.APPROVED;
     }
@@ -78,11 +74,11 @@ public class Promotion {
      * Cancels this Promotion.
      *
      * @param reason the reason for cancellation
-     * @throws DomainException if the current status is already a terminal state (CANCELLED or COMPLETED)
+     * @throws DomainException if the current status cannot transition to CANCELLED
      */
     public void cancel(String reason) {
-        if (status == PromotionStatus.CANCELLED || status == PromotionStatus.COMPLETED) {
-            throw new DomainException("Cannot cancel a Promotion already in terminal status: " + status);
+        if (!status.canTransitionTo(PromotionStatus.CANCELLED)) {
+            throw new DomainException("Cannot cancel promotion. Current status is " + status);
         }
         this.status = PromotionStatus.CANCELLED;
     }
@@ -91,11 +87,11 @@ public class Promotion {
      * Starts the deployment process for this Promotion.
      *
      * @param operator the identifier of the operator starting the deployment
-     * @throws DomainException if the current status is not {@link PromotionStatus#APPROVED}
+     * @throws DomainException if the current status cannot transition to DEPLOYMENT_STARTED
      */
     public void startDeployment(String operator) {
-        if (status != PromotionStatus.APPROVED) {
-            throw new DomainException("Cannot start deployment for a Promotion that is not APPROVED. Current status: " + status);
+        if (!status.canTransitionTo(PromotionStatus.DEPLOYMENT_STARTED)) {
+            throw new DomainException("Cannot start deployment. Current status is " + status);
         }
         this.status = PromotionStatus.DEPLOYMENT_STARTED;
     }
@@ -104,11 +100,11 @@ public class Promotion {
      * Completes the deployment process for this Promotion.
      *
      * @param operator the identifier of the operator completing the deployment
-     * @throws DomainException if the current status is not {@link PromotionStatus#DEPLOYMENT_STARTED}
+     * @throws DomainException if the current status cannot transition to COMPLETED
      */
     public void completeDeployment(String operator) {
-        if (status != PromotionStatus.DEPLOYMENT_STARTED) {
-            throw new DomainException("Cannot complete deployment for a Promotion that is not DEPLOYMENT_STARTED. Current status: " + status);
+        if (!status.canTransitionTo(PromotionStatus.COMPLETED)) {
+            throw new DomainException("Cannot complete deployment. Current status is " + status);
         }
         this.status = PromotionStatus.COMPLETED;
     }

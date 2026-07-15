@@ -27,6 +27,34 @@ class PromotionTest {
     }
 
     @Test
+    void should_ThrowDomainException_When_PromotingBackwards() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Environment sourceEnvironment = Environment.STAGING;
+        Environment targetEnvironment = Environment.DEV;
+
+        // When / Then
+        assertThrows(DomainException.class, () ->
+                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment)
+        );
+    }
+
+    @Test
+    void should_ThrowDomainException_When_PromotingToSameEnvironment() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Environment sourceEnvironment = Environment.DEV;
+        Environment targetEnvironment = Environment.DEV;
+
+        // When / Then
+        assertThrows(DomainException.class, () ->
+                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment)
+        );
+    }
+
+    @Test
     void should_TransitionToApproved_When_ApprovePromotionIsCalledByValidApprover() {
         // Given
         ApplicationId applicationId = new ApplicationId("app-1");
@@ -92,5 +120,21 @@ class PromotionTest {
 
         // Then
         assertEquals(PromotionStatus.COMPLETED, promotion.getStatus());
+    }
+
+    @Test
+    void should_ThrowDomainException_When_StartDeploymentIsCalledOnCompletedPromotion() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        promotion.approve("valid-approver");
+        promotion.startDeployment("system-operator");
+        promotion.completeDeployment("system-operator");
+
+        // When / Then
+        DomainException exception = assertThrows(DomainException.class,
+                () -> promotion.startDeployment("system-operator"));
+        assertEquals("Cannot start deployment. Current status is COMPLETED", exception.getMessage());
     }
 }
