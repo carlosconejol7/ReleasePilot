@@ -87,6 +87,32 @@ public class Promotion {
         this.status = PromotionStatus.CANCELLED;
     }
 
+    /**
+     * Starts the deployment process for this Promotion.
+     *
+     * @param operator the identifier of the operator starting the deployment
+     * @throws DomainException if the current status is not {@link PromotionStatus#APPROVED}
+     */
+    public void startDeployment(String operator) {
+        if (status != PromotionStatus.APPROVED) {
+            throw new DomainException("Cannot start deployment for a Promotion that is not APPROVED. Current status: " + status);
+        }
+        this.status = PromotionStatus.DEPLOYMENT_STARTED;
+    }
+
+    /**
+     * Completes the deployment process for this Promotion.
+     *
+     * @param operator the identifier of the operator completing the deployment
+     * @throws DomainException if the current status is not {@link PromotionStatus#DEPLOYMENT_STARTED}
+     */
+    public void completeDeployment(String operator) {
+        if (status != PromotionStatus.DEPLOYMENT_STARTED) {
+            throw new DomainException("Cannot complete deployment for a Promotion that is not DEPLOYMENT_STARTED. Current status: " + status);
+        }
+        this.status = PromotionStatus.COMPLETED;
+    }
+
     public PromotionStatus getStatus() {
         return status;
     }

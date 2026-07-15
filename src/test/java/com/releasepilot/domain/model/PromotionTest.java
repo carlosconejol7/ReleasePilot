@@ -51,4 +51,46 @@ class PromotionTest {
         // When / Then
         assertThrows(DomainException.class, () -> promotion.approve("valid-approver"));
     }
+
+    @Test
+    void should_TransitionToDeploymentStarted_When_StartDeploymentIsCalledOnApprovedPromotion() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        promotion.approve("valid-approver");
+
+        // When
+        promotion.startDeployment("system-operator");
+
+        // Then
+        assertEquals(PromotionStatus.DEPLOYMENT_STARTED, promotion.getStatus());
+    }
+
+    @Test
+    void should_ThrowDomainException_When_StartDeploymentIsCalledOnNonApprovedPromotion() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+
+        // When / Then
+        assertThrows(DomainException.class, () -> promotion.startDeployment("system-operator"));
+    }
+
+    @Test
+    void should_TransitionToCompleted_When_CompleteDeploymentIsCalledOnStartedPromotion() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        promotion.approve("valid-approver");
+        promotion.startDeployment("system-operator");
+
+        // When
+        promotion.completeDeployment("system-operator");
+
+        // Then
+        assertEquals(PromotionStatus.COMPLETED, promotion.getStatus());
+    }
 }
