@@ -17,16 +17,18 @@ public enum PromotionStatus {
     APPROVED,
     DEPLOYMENT_STARTED,
     COMPLETED,
-    CANCELLED;
+    CANCELLED,
+    ROLLED_BACK;
 
     private static final Map<PromotionStatus, Set<PromotionStatus>> ALLOWED_TRANSITIONS = new EnumMap<>(PromotionStatus.class);
 
     static {
         ALLOWED_TRANSITIONS.put(REQUESTED, EnumSet.of(APPROVED, CANCELLED));
         ALLOWED_TRANSITIONS.put(APPROVED, EnumSet.of(DEPLOYMENT_STARTED, CANCELLED));
-        ALLOWED_TRANSITIONS.put(DEPLOYMENT_STARTED, EnumSet.of(COMPLETED));
-        ALLOWED_TRANSITIONS.put(COMPLETED, EnumSet.noneOf(PromotionStatus.class));
+        ALLOWED_TRANSITIONS.put(DEPLOYMENT_STARTED, EnumSet.of(COMPLETED, CANCELLED, ROLLED_BACK));
+        ALLOWED_TRANSITIONS.put(COMPLETED, EnumSet.of(ROLLED_BACK));
         ALLOWED_TRANSITIONS.put(CANCELLED, EnumSet.noneOf(PromotionStatus.class));
+        ALLOWED_TRANSITIONS.put(ROLLED_BACK, EnumSet.noneOf(PromotionStatus.class));
     }
 
     /**

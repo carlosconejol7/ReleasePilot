@@ -116,10 +116,72 @@ class PromotionTest {
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
-        promotion.cancel("no longer needed");
+        promotion.cancel("user-1", "no longer needed");
 
         // When / Then
         assertThrows(DomainException.class, () -> promotion.approve("user-2"));
+    }
+
+    @Test
+    void should_TransitionToCancelled_When_CancelIsCalledOnDeploymentStartedPromotion() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
+        promotion.approve("user-2");
+        promotion.startDeployment("system-operator");
+
+        // When
+        promotion.cancel("user-1", "aborting deployment");
+
+        // Then
+        assertEquals(PromotionStatus.CANCELLED, promotion.getStatus());
+    }
+
+    @Test
+    void should_TransitionToRolledBack_When_RollbackIsCalledOnDeploymentStartedPromotion() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
+        promotion.approve("user-2");
+        promotion.startDeployment("system-operator");
+
+        // When
+        promotion.rollback("system-operator", "deployment failed");
+
+        // Then
+        assertEquals(PromotionStatus.ROLLED_BACK, promotion.getStatus());
+    }
+
+    @Test
+    void should_TransitionToRolledBack_When_RollbackIsCalledOnCompletedPromotion() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
+        promotion.approve("user-2");
+        promotion.startDeployment("system-operator");
+        promotion.completeDeployment("system-operator");
+
+        // When
+        promotion.rollback("system-operator", "post-deployment issue detected");
+
+        // Then
+        assertEquals(PromotionStatus.ROLLED_BACK, promotion.getStatus());
+    }
+
+    @Test
+    void should_ThrowDomainException_When_RollbackIsCalledOnRequestedPromotion() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
+
+        // When / Then
+        DomainException exception = assertThrows(DomainException.class,
+                () -> promotion.rollback("system-operator", "not deployed yet"));
+        assertEquals("Cannot rollback promotion. Current status is REQUESTED", exception.getMessage());
     }
 
     @Test

@@ -109,10 +109,11 @@ public class Promotion {
     /**
      * Cancels this Promotion.
      *
-     * @param reason the reason for cancellation
+     * @param cancelledBy the identifier of the user cancelling the promotion
+     * @param reason      the reason for cancellation
      * @throws DomainException if the current status cannot transition to CANCELLED
      */
-    public void cancel(String reason) {
+    public void cancel(String cancelledBy, String reason) {
         if (!status.canTransitionTo(PromotionStatus.CANCELLED)) {
             throw new DomainException("Cannot cancel promotion. Current status is " + status);
         }
@@ -143,6 +144,20 @@ public class Promotion {
             throw new DomainException("Cannot complete deployment. Current status is " + status);
         }
         this.status = PromotionStatus.COMPLETED;
+    }
+
+    /**
+     * Rolls back this Promotion, either due to a failed deployment or as a post-deployment reversal.
+     *
+     * @param operator the identifier of the operator performing the rollback
+     * @param reason   the reason for the rollback
+     * @throws DomainException if the current status cannot transition to ROLLED_BACK
+     */
+    public void rollback(String operator, String reason) {
+        if (!status.canTransitionTo(PromotionStatus.ROLLED_BACK)) {
+            throw new DomainException("Cannot rollback promotion. Current status is " + status);
+        }
+        this.status = PromotionStatus.ROLLED_BACK;
     }
 
     public PromotionId getId() {
