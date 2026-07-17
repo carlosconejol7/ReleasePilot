@@ -46,6 +46,7 @@ public class RequestPromotionCommandHandler {
                 version,
                 source,
                 target,
+                command.requestedBy(),
                 hasCompletedPreviousEnvironment,
                 hasActivePromotionInTarget
         );

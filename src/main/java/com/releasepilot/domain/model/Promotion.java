@@ -18,6 +18,7 @@ public class Promotion {
     private final Version version;
     private final Environment sourceEnvironment;
     private final Environment targetEnvironment;
+    private final String requestedBy;
 
     private PromotionStatus status;
 
@@ -26,12 +27,14 @@ public class Promotion {
                        Version version,
                        Environment sourceEnvironment,
                        Environment targetEnvironment,
+                       String requestedBy,
                        PromotionStatus status) {
         this.id = id;
         this.applicationId = applicationId;
         this.version = version;
         this.sourceEnvironment = sourceEnvironment;
         this.targetEnvironment = targetEnvironment;
+        this.requestedBy = requestedBy;
         this.status = status;
     }
 
@@ -55,6 +58,7 @@ public class Promotion {
      * @param version                          the version of the application being promoted
      * @param source                           the source environment
      * @param target                           the target environment
+     * @param requestedBy                      the identifier of the user requesting the promotion
      * @param hasCompletedPreviousEnvironment  whether the version has completed the source environment
      * @param hasActivePromotionInTarget       whether an active promotion already exists for the target environment
      * @return a new {@link Promotion} instance in {@link PromotionStatus#REQUESTED} status
@@ -66,6 +70,7 @@ public class Promotion {
                                      Version version,
                                      Environment source,
                                      Environment target,
+                                     String requestedBy,
                                      boolean hasCompletedPreviousEnvironment,
                                      boolean hasActivePromotionInTarget) {
         if (!source.canTransitionTo(target)) {
@@ -81,18 +86,22 @@ public class Promotion {
         }
 
         PromotionId id = new PromotionId(UUID.randomUUID().toString());
-        return new Promotion(id, applicationId, version, source, target, PromotionStatus.REQUESTED);
+        return new Promotion(id, applicationId, version, source, target, requestedBy, PromotionStatus.REQUESTED);
     }
 
     /**
      * Approves this Promotion.
      *
      * @param approver the identifier of the approver
-     * @throws DomainException if the current status cannot transition to APPROVED
+     * @throws DomainException if the current status cannot transition to APPROVED,
+     *                         or if the approver is the same user who requested the promotion
      */
     public void approve(String approver) {
         if (!status.canTransitionTo(PromotionStatus.APPROVED)) {
             throw new DomainException("Cannot approve promotion. Current status is " + status);
+        }
+        if (this.requestedBy.equalsIgnoreCase(approver)) {
+            throw new DomainException("The requester cannot approve their own promotion request.");
         }
         this.status = PromotionStatus.APPROVED;
     }

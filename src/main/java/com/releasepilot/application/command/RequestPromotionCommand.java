@@ -10,11 +10,13 @@ import com.releasepilot.domain.model.Environment;
  * @param version           the version of the application being promoted
  * @param sourceEnvironment the source environment
  * @param targetEnvironment the target environment
+ * @param requestedBy       the identifier of the user requesting the promotion
  */
 public record RequestPromotionCommand(
         String applicationId,
         String version,
         Environment sourceEnvironment,
-        Environment targetEnvironment
+        Environment targetEnvironment,
+        String requestedBy
 ) {
 }

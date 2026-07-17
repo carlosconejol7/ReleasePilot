@@ -38,7 +38,7 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_CreateAndSavePromotion_When_CommandIsValid() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, "user-1");
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(false);
         when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.DEV))).thenReturn(true);
 
@@ -53,7 +53,7 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_PropagateException_When_TargetEnvironmentAlreadyHasActivePromotion() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, "user-1");
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(true);
 
         // When / Then
@@ -64,7 +64,7 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_PropagateException_When_VersionHasNotCompletedSourceEnvironment() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION, "user-1");
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.PRODUCTION))).thenReturn(false);
         when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.STAGING))).thenReturn(false);
 
@@ -76,7 +76,7 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_AllowPromotionFromDev_WithoutCheckingHistory() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, "user-1");
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(false);
 
         // When
