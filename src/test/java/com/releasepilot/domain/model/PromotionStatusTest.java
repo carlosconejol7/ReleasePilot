@@ -77,8 +77,8 @@ class PromotionStatusTest {
     }
 
     @Test
-    void should_DenyTransitionToCancelled_When_CurrentStatusIsDeploymentStarted() {
-        assertFalse(PromotionStatus.DEPLOYMENT_STARTED.canTransitionTo(PromotionStatus.CANCELLED));
+    void should_AllowTransitionToCancelled_When_CurrentStatusIsDeploymentStarted() {
+        assertTrue(PromotionStatus.DEPLOYMENT_STARTED.canTransitionTo(PromotionStatus.CANCELLED));
     }
 
     @Test

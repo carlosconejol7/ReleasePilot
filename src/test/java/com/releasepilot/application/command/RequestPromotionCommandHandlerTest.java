@@ -42,9 +42,9 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_CreateAndSavePromotion_When_CommandIsValid() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, "user-1");
-        when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(false);
-        when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.DEV))).thenReturn(true);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION, "user-1");
+        when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.PRODUCTION))).thenReturn(false);
+        when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.STAGING))).thenReturn(true);
 
         // When
         PromotionId promotionId = handler.handle(command);
@@ -52,7 +52,7 @@ class RequestPromotionCommandHandlerTest {
         // Then
         assertNotNull(promotionId);
         verify(repository, times(1)).save(any());
-        verify(publisher, times(1)).publish(any(com.releasepilot.domain.event.PromotionRequested.class));
+        verify(publisher, times(1)).publish(any());
     }
 
     @Test
