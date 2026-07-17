@@ -41,16 +41,43 @@ public class Promotion {
      * <p>The transition from source to target must be a valid, forward, single-step
      * environment transition as defined by {@link Environment#canTransitionTo(Environment)}.</p>
      *
-     * @param applicationId the identifier of the application being promoted
-     * @param version       the version of the application being promoted
-     * @param source        the source environment
-     * @param target        the target environment
+     * <p>Additionally, the caller must supply the results of the following history checks,
+     * which are enforced as aggregate invariants:</p>
+     * <ul>
+     *     <li>{@code hasActivePromotionInTarget} - whether another promotion for the same
+     *     application and target environment is already in progress. Only one such promotion
+     *     may be active at a time.</li>
+     *     <li>{@code hasCompletedPreviousEnvironment} - whether the version being promoted has
+     *     already completed a promotion into the source environment.</li>
+     * </ul>
+     *
+     * @param applicationId                   the identifier of the application being promoted
+     * @param version                          the version of the application being promoted
+     * @param source                           the source environment
+     * @param target                           the target environment
+     * @param hasCompletedPreviousEnvironment  whether the version has completed the source environment
+     * @param hasActivePromotionInTarget       whether an active promotion already exists for the target environment
      * @return a new {@link Promotion} instance in {@link PromotionStatus#REQUESTED} status
-     * @throws DomainException if the requested environment transition is not allowed
+     * @throws DomainException if the requested environment transition is not allowed,
+     *                         if another promotion is already active in the target environment,
+     *                         or if the version has not completed the source environment
      */
-    public static Promotion request(ApplicationId applicationId, Version version, Environment source, Environment target) {
+    public static Promotion request(ApplicationId applicationId,
+                                     Version version,
+                                     Environment source,
+                                     Environment target,
+                                     boolean hasCompletedPreviousEnvironment,
+                                     boolean hasActivePromotionInTarget) {
         if (!source.canTransitionTo(target)) {
             throw new DomainException("Cannot promote directly from " + source + " to " + target);
+        }
+
+        if (hasActivePromotionInTarget) {
+            throw new DomainException("Only one promotion may be in progress per application + target environment");
+        }
+
+        if (!hasCompletedPreviousEnvironment) {
+            throw new DomainException(version.value() + " has not completed " + source);
         }
 
         PromotionId id = new PromotionId(UUID.randomUUID().toString());

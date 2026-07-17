@@ -22,7 +22,7 @@ class PromotionTest {
 
         // When / Then
         assertThrows(DomainException.class, () ->
-                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment)
+                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment, true, false)
         );
     }
 
@@ -36,7 +36,7 @@ class PromotionTest {
 
         // When / Then
         assertThrows(DomainException.class, () ->
-                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment)
+                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment, true, false)
         );
     }
 
@@ -50,8 +50,38 @@ class PromotionTest {
 
         // When / Then
         assertThrows(DomainException.class, () ->
-                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment)
+                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment, true, false)
         );
+    }
+
+    @Test
+    void should_ThrowDomainException_When_VersionHasNotCompletedPreviousEnvironment() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Environment sourceEnvironment = Environment.DEV;
+        Environment targetEnvironment = Environment.STAGING;
+
+        // When / Then
+        DomainException exception = assertThrows(DomainException.class, () ->
+                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment, false, false)
+        );
+        assertEquals("1.0.0 has not completed DEV", exception.getMessage());
+    }
+
+    @Test
+    void should_ThrowDomainException_When_AnotherPromotionIsAlreadyInProgressInTarget() {
+        // Given
+        ApplicationId applicationId = new ApplicationId("app-1");
+        Version version = new Version("1.0.0");
+        Environment sourceEnvironment = Environment.DEV;
+        Environment targetEnvironment = Environment.STAGING;
+
+        // When / Then
+        DomainException exception = assertThrows(DomainException.class, () ->
+                Promotion.request(applicationId, version, sourceEnvironment, targetEnvironment, true, true)
+        );
+        assertEquals("Only one promotion may be in progress per application + target environment", exception.getMessage());
     }
 
     @Test
@@ -59,7 +89,7 @@ class PromotionTest {
         // Given
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
-        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, true, false);
 
         // When
         promotion.approve("valid-approver");
@@ -73,7 +103,7 @@ class PromotionTest {
         // Given
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
-        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, true, false);
         promotion.cancel("no longer needed");
 
         // When / Then
@@ -85,7 +115,7 @@ class PromotionTest {
         // Given
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
-        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, true, false);
         promotion.approve("valid-approver");
 
         // When
@@ -100,7 +130,7 @@ class PromotionTest {
         // Given
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
-        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, true, false);
 
         // When / Then
         assertThrows(DomainException.class, () -> promotion.startDeployment("system-operator"));
@@ -111,7 +141,7 @@ class PromotionTest {
         // Given
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
-        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, true, false);
         promotion.approve("valid-approver");
         promotion.startDeployment("system-operator");
 
@@ -127,7 +157,7 @@ class PromotionTest {
         // Given
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
-        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING);
+        Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, true, false);
         promotion.approve("valid-approver");
         promotion.startDeployment("system-operator");
         promotion.completeDeployment("system-operator");
