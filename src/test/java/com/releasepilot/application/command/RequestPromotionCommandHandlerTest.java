@@ -1,5 +1,6 @@
 package com.releasepilot.application.command;
 
+import com.releasepilot.application.event.DomainEventPublisher;
 import com.releasepilot.domain.exception.DomainException;
 import com.releasepilot.domain.model.ApplicationId;
 import com.releasepilot.domain.model.Environment;
@@ -32,6 +33,9 @@ class RequestPromotionCommandHandlerTest {
     @Mock
     private PromotionRepository repository;
 
+    @Mock
+    private DomainEventPublisher publisher;
+
     @InjectMocks
     private RequestPromotionCommandHandler handler;
 
@@ -48,6 +52,7 @@ class RequestPromotionCommandHandlerTest {
         // Then
         assertNotNull(promotionId);
         verify(repository, times(1)).save(any());
+        verify(publisher, times(1)).publish(any(com.releasepilot.domain.event.PromotionRequested.class));
     }
 
     @Test
@@ -59,6 +64,7 @@ class RequestPromotionCommandHandlerTest {
         // When / Then
         assertThrows(DomainException.class, () -> handler.handle(command));
         verify(repository, never()).save(any());
+        verify(publisher, never()).publish(any());
     }
 
     @Test
@@ -71,6 +77,7 @@ class RequestPromotionCommandHandlerTest {
         // When / Then
         assertThrows(DomainException.class, () -> handler.handle(command));
         verify(repository, never()).save(any());
+        verify(publisher, never()).publish(any());
     }
 
     @Test
@@ -86,5 +93,6 @@ class RequestPromotionCommandHandlerTest {
         assertNotNull(promotionId);
         verify(repository, times(1)).save(any());
         verify(repository, never()).hasVersionCompletedEnvironment(any(), any(), any());
+        verify(publisher, times(1)).publish(any(com.releasepilot.domain.event.PromotionRequested.class));
     }
 }
