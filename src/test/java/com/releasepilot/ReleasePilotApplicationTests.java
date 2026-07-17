@@ -9,10 +9,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest
 class ReleasePilotApplicationTests {
 
-	// Using @MockBean tells Spring to inject these mocks into the context
-	// automatically. This satisfies Sonar because it uses the framework's
-	// built-in mechanism instead of manual 'Mockito.mock()' calls.
-
 	@MockitoBean
 	private PromotionRepository promotionRepository;
 
