@@ -1,0 +1,40 @@
+package com.releasepilot.application.command;
+
+import com.releasepilot.domain.exception.DomainException;
+import com.releasepilot.domain.model.Promotion;
+import com.releasepilot.domain.model.PromotionId;
+import com.releasepilot.domain.repository.PromotionRepository;
+import org.springframework.stereotype.Service;
+
+/**
+ * Application service handling {@link ApprovePromotionCommand}.
+ *
+ * <p>Loads the target {@link Promotion} aggregate, delegates the approval invariant
+ * enforcement to it, and persists the resulting state via {@link PromotionRepository}.</p>
+ */
+@Service
+public class ApprovePromotionCommandHandler {
+
+    private final PromotionRepository repository;
+
+    public ApprovePromotionCommandHandler(PromotionRepository repository) {
+        this.repository = repository;
+    }
+
+    /**
+     * Handles the given {@link ApprovePromotionCommand}, approving the referenced Promotion.
+     *
+     * @param command the command describing the approval request
+     * @throws DomainException if the promotion does not exist, or if the approval invariants are violated
+     */
+    public void handle(ApprovePromotionCommand command) {
+        PromotionId promotionId = new PromotionId(command.promotionId());
+
+        Promotion promotion = repository.findById(promotionId)
+                .orElseThrow(() -> new DomainException("Promotion not found: " + command.promotionId()));
+
+        promotion.approve(command.approver());
+
+        repository.save(promotion);
+    }
+}
