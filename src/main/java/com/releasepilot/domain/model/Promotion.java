@@ -1,7 +1,16 @@
 package com.releasepilot.domain.model;
 
+import com.releasepilot.domain.event.DeploymentStarted;
+import com.releasepilot.domain.event.PromotionApproved;
+import com.releasepilot.domain.event.PromotionCancelled;
+import com.releasepilot.domain.event.PromotionCompleted;
+import com.releasepilot.domain.event.PromotionRequested;
+import com.releasepilot.domain.event.PromotionRolledBack;
 import com.releasepilot.domain.exception.DomainException;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -21,6 +30,8 @@ public class Promotion {
     private final String requestedBy;
 
     private PromotionStatus status;
+
+    private final List<Object> domainEvents = new ArrayList<>();
 
     private Promotion(PromotionId id,
                        ApplicationId applicationId,
@@ -86,7 +97,17 @@ public class Promotion {
         }
 
         PromotionId id = new PromotionId(UUID.randomUUID().toString());
-        return new Promotion(id, applicationId, version, source, target, requestedBy, PromotionStatus.REQUESTED);
+        Promotion promotion = new Promotion(id, applicationId, version, source, target, requestedBy, PromotionStatus.REQUESTED);
+
+        promotion.domainEvents.add(new PromotionRequested(
+                id.value(),
+                applicationId.value(),
+                version.value(),
+                requestedBy,
+                Instant.now()
+        ));
+
+        return promotion;
     }
 
     /**
@@ -104,6 +125,7 @@ public class Promotion {
             throw new DomainException("The requester cannot approve their own promotion request.");
         }
         this.status = PromotionStatus.APPROVED;
+        this.domainEvents.add(new PromotionApproved(id.value(), approver.value(), Instant.now()));
     }
 
     /**
@@ -118,6 +140,7 @@ public class Promotion {
             throw new DomainException("Cannot cancel promotion. Current status is " + status);
         }
         this.status = PromotionStatus.CANCELLED;
+        this.domainEvents.add(new PromotionCancelled(id.value(), cancelledBy, reason, Instant.now()));
     }
 
     /**
@@ -131,6 +154,7 @@ public class Promotion {
             throw new DomainException("Cannot start deployment. Current status is " + status);
         }
         this.status = PromotionStatus.DEPLOYMENT_STARTED;
+        this.domainEvents.add(new DeploymentStarted(id.value(), operator, Instant.now()));
     }
 
     /**
@@ -144,6 +168,7 @@ public class Promotion {
             throw new DomainException("Cannot complete deployment. Current status is " + status);
         }
         this.status = PromotionStatus.COMPLETED;
+        this.domainEvents.add(new PromotionCompleted(id.value(), operator, Instant.now()));
     }
 
     /**
@@ -158,6 +183,18 @@ public class Promotion {
             throw new DomainException("Cannot rollback promotion. Current status is " + status);
         }
         this.status = PromotionStatus.ROLLED_BACK;
+        this.domainEvents.add(new PromotionRolledBack(id.value(), operator, reason, Instant.now()));
+    }
+
+    /**
+     * Returns and clears the list of domain events recorded by this aggregate so far.
+     *
+     * @return a copy of the recorded domain events, in the order they were recorded
+     */
+    public List<Object> pullDomainEvents() {
+        List<Object> copy = new ArrayList<>(domainEvents);
+        domainEvents.clear();
+        return copy;
     }
 
     public PromotionId getId() {

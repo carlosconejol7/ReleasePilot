@@ -1,5 +1,6 @@
 package com.releasepilot.application.command;
 
+import com.releasepilot.application.event.DomainEventPublisher;
 import com.releasepilot.domain.exception.DomainException;
 import com.releasepilot.domain.model.Approver;
 import com.releasepilot.domain.model.Promotion;
@@ -17,9 +18,11 @@ import org.springframework.stereotype.Service;
 public class ApprovePromotionCommandHandler {
 
     private final PromotionRepository repository;
+    private final DomainEventPublisher publisher;
 
-    public ApprovePromotionCommandHandler(PromotionRepository repository) {
+    public ApprovePromotionCommandHandler(PromotionRepository repository, DomainEventPublisher publisher) {
         this.repository = repository;
+        this.publisher = publisher;
     }
 
     /**
@@ -37,5 +40,9 @@ public class ApprovePromotionCommandHandler {
         promotion.approve(new Approver(command.approver()));
 
         repository.save(promotion);
+
+        for (Object event : promotion.pullDomainEvents()) {
+            publisher.publish(event);
+        }
     }
 }

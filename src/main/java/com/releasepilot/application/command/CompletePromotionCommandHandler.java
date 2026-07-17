@@ -1,5 +1,6 @@
 package com.releasepilot.application.command;
 
+import com.releasepilot.application.event.DomainEventPublisher;
 import com.releasepilot.domain.exception.DomainException;
 import com.releasepilot.domain.model.Promotion;
 import com.releasepilot.domain.model.PromotionId;
@@ -16,9 +17,11 @@ import org.springframework.stereotype.Service;
 public class CompletePromotionCommandHandler {
 
     private final PromotionRepository repository;
+    private final DomainEventPublisher publisher;
 
-    public CompletePromotionCommandHandler(PromotionRepository repository) {
+    public CompletePromotionCommandHandler(PromotionRepository repository, DomainEventPublisher publisher) {
         this.repository = repository;
+        this.publisher = publisher;
     }
 
     /**
@@ -36,5 +39,9 @@ public class CompletePromotionCommandHandler {
         promotion.completeDeployment(command.operator());
 
         repository.save(promotion);
+
+        for (Object event : promotion.pullDomainEvents()) {
+            publisher.publish(event);
+        }
     }
 }

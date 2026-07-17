@@ -1,5 +1,6 @@
 package com.releasepilot.application.command;
 
+import com.releasepilot.application.event.DomainEventPublisher;
 import com.releasepilot.domain.model.ApplicationId;
 import com.releasepilot.domain.model.Environment;
 import com.releasepilot.domain.model.Promotion;
@@ -19,9 +20,11 @@ import org.springframework.stereotype.Service;
 public class RequestPromotionCommandHandler {
 
     private final PromotionRepository repository;
+    private final DomainEventPublisher publisher;
 
-    public RequestPromotionCommandHandler(PromotionRepository repository) {
+    public RequestPromotionCommandHandler(PromotionRepository repository, DomainEventPublisher publisher) {
         this.repository = repository;
+        this.publisher = publisher;
     }
 
     /**
@@ -52,6 +55,10 @@ public class RequestPromotionCommandHandler {
         );
 
         repository.save(promotion);
+
+        for (Object event : promotion.pullDomainEvents()) {
+            publisher.publish(event);
+        }
 
         return promotion.getId();
     }
