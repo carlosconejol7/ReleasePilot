@@ -136,6 +136,10 @@ public class Promotion {
         this.status = PromotionStatus.COMPLETED;
     }
 
+    public PromotionId getId() {
+        return id;
+    }
+
     public PromotionStatus getStatus() {
         return status;
     }
