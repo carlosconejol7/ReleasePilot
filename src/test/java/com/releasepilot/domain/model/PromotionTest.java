@@ -92,7 +92,7 @@ class PromotionTest {
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
 
         // When
-        promotion.approve("user-2");
+        promotion.approve(new Approver("user-2"));
 
         // Then
         assertEquals(PromotionStatus.APPROVED, promotion.getStatus());
@@ -106,7 +106,7 @@ class PromotionTest {
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
 
         // When / Then
-        DomainException exception = assertThrows(DomainException.class, () -> promotion.approve("user-1"));
+        DomainException exception = assertThrows(DomainException.class, () -> promotion.approve(new Approver("user-1")));
         assertEquals("The requester cannot approve their own promotion request.", exception.getMessage());
     }
 
@@ -119,7 +119,7 @@ class PromotionTest {
         promotion.cancel("user-1", "no longer needed");
 
         // When / Then
-        assertThrows(DomainException.class, () -> promotion.approve("user-2"));
+        assertThrows(DomainException.class, () -> promotion.approve(new Approver("user-2")));
     }
 
     @Test
@@ -128,7 +128,7 @@ class PromotionTest {
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
-        promotion.approve("user-2");
+        promotion.approve(new Approver("user-2"));
         promotion.startDeployment("system-operator");
 
         // When
@@ -144,7 +144,7 @@ class PromotionTest {
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
-        promotion.approve("user-2");
+        promotion.approve(new Approver("user-2"));
         promotion.startDeployment("system-operator");
 
         // When
@@ -173,7 +173,7 @@ class PromotionTest {
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
-        promotion.approve("user-2");
+        promotion.approve(new Approver("user-2"));
         promotion.startDeployment("system-operator");
         promotion.completeDeployment("system-operator");
 
@@ -189,7 +189,7 @@ class PromotionTest {
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
-        promotion.approve("user-2");
+        promotion.approve(new Approver("user-2"));
 
         // When
         promotion.startDeployment("system-operator");
@@ -215,7 +215,7 @@ class PromotionTest {
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
-        promotion.approve("user-2");
+        promotion.approve(new Approver("user-2"));
         promotion.startDeployment("system-operator");
 
         // When
@@ -231,7 +231,7 @@ class PromotionTest {
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
         Promotion promotion = Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
-        promotion.approve("user-2");
+        promotion.approve(new Approver("user-2"));
         promotion.startDeployment("system-operator");
         promotion.completeDeployment("system-operator");
 

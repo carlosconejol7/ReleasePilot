@@ -92,15 +92,15 @@ public class Promotion {
     /**
      * Approves this Promotion.
      *
-     * @param approver the identifier of the approver
+     * @param approver the approver requesting to approve this promotion
      * @throws DomainException if the current status cannot transition to APPROVED,
      *                         or if the approver is the same user who requested the promotion
      */
-    public void approve(String approver) {
+    public void approve(Approver approver) {
         if (!status.canTransitionTo(PromotionStatus.APPROVED)) {
             throw new DomainException("Cannot approve promotion. Current status is " + status);
         }
-        if (this.requestedBy.equalsIgnoreCase(approver)) {
+        if (this.requestedBy.equalsIgnoreCase(approver.value())) {
             throw new DomainException("The requester cannot approve their own promotion request.");
         }
         this.status = PromotionStatus.APPROVED;

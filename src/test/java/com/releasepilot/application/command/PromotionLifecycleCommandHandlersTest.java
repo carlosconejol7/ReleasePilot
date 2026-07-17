@@ -2,6 +2,7 @@ package com.releasepilot.application.command;
 
 import com.releasepilot.domain.exception.DomainException;
 import com.releasepilot.domain.model.ApplicationId;
+import com.releasepilot.domain.model.Approver;
 import com.releasepilot.domain.model.Environment;
 import com.releasepilot.domain.model.Promotion;
 import com.releasepilot.domain.model.PromotionId;
@@ -55,7 +56,7 @@ class PromotionLifecycleCommandHandlersTest {
 
     private Promotion newApprovedPromotion() {
         Promotion promotion = newRequestedPromotion();
-        promotion.approve("user-2");
+        promotion.approve(new Approver("user-2"));
         return promotion;
     }
 

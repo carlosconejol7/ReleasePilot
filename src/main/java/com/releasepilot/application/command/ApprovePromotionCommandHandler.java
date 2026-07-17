@@ -1,6 +1,7 @@
 package com.releasepilot.application.command;
 
 import com.releasepilot.domain.exception.DomainException;
+import com.releasepilot.domain.model.Approver;
 import com.releasepilot.domain.model.Promotion;
 import com.releasepilot.domain.model.PromotionId;
 import com.releasepilot.domain.repository.PromotionRepository;
@@ -33,7 +34,7 @@ public class ApprovePromotionCommandHandler {
         Promotion promotion = repository.findById(promotionId)
                 .orElseThrow(() -> new DomainException("Promotion not found: " + command.promotionId()));
 
-        promotion.approve(command.approver());
+        promotion.approve(new Approver(command.approver()));
 
         repository.save(promotion);
     }
