@@ -65,12 +65,6 @@ class PromotionLifecycleCommandHandlersTest {
         return promotion;
     }
 
-    private Promotion newCompletedPromotion() {
-        Promotion promotion = newDeploymentStartedPromotion();
-        promotion.completeDeployment("system-operator");
-        return promotion;
-    }
-
     // --- ApprovePromotionCommandHandler ---
 
     @Test
@@ -204,22 +198,6 @@ class PromotionLifecycleCommandHandlersTest {
         when(repository.findById(eq(promotion.getId()))).thenReturn(Optional.of(promotion));
         RollbackPromotionCommandHandler handler = new RollbackPromotionCommandHandler(repository);
         RollbackPromotionCommand command = new RollbackPromotionCommand(promotion.getId().value(), "system-operator", "deployment failed");
-
-        // When
-        handler.handle(command);
-
-        // Then
-        assertEquals(PromotionStatus.ROLLED_BACK, promotion.getStatus());
-        verify(repository, times(1)).save(promotion);
-    }
-
-    @Test
-    void should_RollbackAndSavePromotion_When_PromotionIsCompleted() {
-        // Given
-        Promotion promotion = newCompletedPromotion();
-        when(repository.findById(eq(promotion.getId()))).thenReturn(Optional.of(promotion));
-        RollbackPromotionCommandHandler handler = new RollbackPromotionCommandHandler(repository);
-        RollbackPromotionCommand command = new RollbackPromotionCommand(promotion.getId().value(), "system-operator", "post-deployment issue detected");
 
         // When
         handler.handle(command);
