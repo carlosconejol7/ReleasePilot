@@ -78,7 +78,6 @@ class RequestPromotionCommandHandlerTest {
         // Given
         RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING);
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(false);
-        when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.DEV))).thenReturn(true);
 
         // When
         PromotionId promotionId = handler.handle(command);
@@ -86,5 +85,6 @@ class RequestPromotionCommandHandlerTest {
         // Then
         assertNotNull(promotionId);
         verify(repository, times(1)).save(any());
+        verify(repository, never()).hasVersionCompletedEnvironment(any(), any(), any());
     }
 }

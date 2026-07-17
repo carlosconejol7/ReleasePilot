@@ -38,7 +38,8 @@ public class RequestPromotionCommandHandler {
         Environment target = command.targetEnvironment();
 
         boolean hasActivePromotionInTarget = repository.hasActivePromotion(applicationId, target);
-        boolean hasCompletedPreviousEnvironment = repository.hasVersionCompletedEnvironment(applicationId, version, source);
+        boolean hasCompletedPreviousEnvironment = source == Environment.DEV
+                || repository.hasVersionCompletedEnvironment(applicationId, version, source);
 
         Promotion promotion = Promotion.request(
                 applicationId,
