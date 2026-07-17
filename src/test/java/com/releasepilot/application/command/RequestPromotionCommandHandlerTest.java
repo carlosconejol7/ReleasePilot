@@ -64,9 +64,9 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_PropagateException_When_VersionHasNotCompletedSourceEnvironment() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING);
-        when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(false);
-        when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.DEV))).thenReturn(false);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION);
+        when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.PRODUCTION))).thenReturn(false);
+        when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.STAGING))).thenReturn(false);
 
         // When / Then
         assertThrows(DomainException.class, () -> handler.handle(command));
