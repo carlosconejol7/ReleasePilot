@@ -104,6 +104,8 @@ public class Promotion {
                 id.value(),
                 applicationId.value(),
                 version.value(),
+                source,
+                target,
                 requestedBy,
                 Instant.now()
         ));
