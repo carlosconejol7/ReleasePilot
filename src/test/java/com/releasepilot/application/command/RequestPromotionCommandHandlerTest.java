@@ -1,10 +1,11 @@
 package com.releasepilot.application.command;
 
-import com.releasepilot.application.event.DomainEventPublisher;
+import com.releasepilot.application.event.PromotionEventPublisher;
 import com.releasepilot.domain.exception.DomainException;
 import com.releasepilot.domain.model.ApplicationId;
 import com.releasepilot.domain.model.Environment;
 import com.releasepilot.domain.model.PromotionId;
+import com.releasepilot.domain.model.User;
 import com.releasepilot.domain.model.Version;
 import com.releasepilot.domain.repository.PromotionRepository;
 import org.junit.jupiter.api.Test;
@@ -34,15 +35,17 @@ class RequestPromotionCommandHandlerTest {
     private PromotionRepository repository;
 
     @Mock
-    private DomainEventPublisher publisher;
+    private PromotionEventPublisher publisher;
 
     @InjectMocks
     private RequestPromotionCommandHandler handler;
 
+    private static final User REQUESTER = new User("user-1", false);
+
     @Test
     void should_CreateAndSavePromotion_When_CommandIsValid() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION, "user-1");
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION, REQUESTER);
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.PRODUCTION))).thenReturn(false);
         when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.STAGING))).thenReturn(true);
 
@@ -58,7 +61,7 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_PropagateException_When_TargetEnvironmentAlreadyHasActivePromotion() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, "user-1");
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, REQUESTER);
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(true);
 
         // When / Then
@@ -70,7 +73,7 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_PropagateException_When_VersionHasNotCompletedSourceEnvironment() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION, "user-1");
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION, REQUESTER);
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.PRODUCTION))).thenReturn(false);
         when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.STAGING))).thenReturn(false);
 
@@ -83,7 +86,7 @@ class RequestPromotionCommandHandlerTest {
     @Test
     void should_AllowPromotionFromDev_WithoutCheckingHistory() {
         // Given
-        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, "user-1");
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, REQUESTER);
         when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(false);
 
         // When

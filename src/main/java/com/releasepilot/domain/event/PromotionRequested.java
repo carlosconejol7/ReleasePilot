@@ -1,5 +1,7 @@
 package com.releasepilot.domain.event;
 
+import com.releasepilot.domain.model.User;
+
 import java.time.Instant;
 
 /**
@@ -8,14 +10,14 @@ import java.time.Instant;
  * @param promotionId   the identifier of the promotion
  * @param applicationId the identifier of the application being promoted
  * @param version       the version of the application being promoted
- * @param actingUser    the identifier of the user who requested the promotion
+ * @param actor         the user who requested the promotion
  * @param occurredAt    the instant at which the event occurred
  */
 public record PromotionRequested(
         String promotionId,
         String applicationId,
         String version,
-        String actingUser,
+        User actor,
         Instant occurredAt
-) {
+) implements PromotionEvent {
 }

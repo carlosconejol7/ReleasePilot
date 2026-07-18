@@ -1,6 +1,6 @@
 package com.releasepilot;
 
-import com.releasepilot.application.event.DomainEventPublisher;
+import com.releasepilot.application.event.PromotionEventPublisher;
 import com.releasepilot.domain.repository.PromotionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,7 +13,7 @@ class ReleasePilotApplicationTests {
 	private PromotionRepository promotionRepository;
 
 	@MockitoBean
-	private DomainEventPublisher domainEventPublisher;
+	private PromotionEventPublisher promotionEventPublisher;
 
 	@Test
 	void contextLoads() {

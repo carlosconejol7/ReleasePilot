@@ -1,13 +1,13 @@
 package com.releasepilot.application.command;
 
-import com.releasepilot.application.event.DomainEventPublisher;
+import com.releasepilot.application.event.PromotionEventPublisher;
 import com.releasepilot.domain.exception.DomainException;
 import com.releasepilot.domain.model.ApplicationId;
-import com.releasepilot.domain.model.Approver;
 import com.releasepilot.domain.model.Environment;
 import com.releasepilot.domain.model.Promotion;
 import com.releasepilot.domain.model.PromotionId;
 import com.releasepilot.domain.model.PromotionStatus;
+import com.releasepilot.domain.model.User;
 import com.releasepilot.domain.model.Version;
 import com.releasepilot.domain.repository.PromotionRepository;
 import org.junit.jupiter.api.Test;
@@ -49,25 +49,29 @@ class PromotionLifecycleCommandHandlersTest {
     private PromotionRepository repository;
 
     @Mock
-    private DomainEventPublisher publisher;
+    private PromotionEventPublisher publisher;
 
     private static final String PROMOTION_ID_VALUE = "promotion-1";
+
+    private static final User REQUESTER = new User("user-1", false);
+    private static final User APPROVER = new User("user-2", true);
+    private static final User OPERATOR = new User("system-operator", true);
 
     private Promotion newRequestedPromotion() {
         ApplicationId applicationId = new ApplicationId("app-1");
         Version version = new Version("1.0.0");
-        return Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, "user-1", true, false);
+        return Promotion.request(applicationId, version, Environment.DEV, Environment.STAGING, REQUESTER, true, false);
     }
 
     private Promotion newApprovedPromotion() {
         Promotion promotion = newRequestedPromotion();
-        promotion.approve(new Approver("user-2"));
+        promotion.approve(APPROVER);
         return promotion;
     }
 
     private Promotion newDeploymentStartedPromotion() {
         Promotion promotion = newApprovedPromotion();
-        promotion.startDeployment("system-operator");
+        promotion.startDeployment(OPERATOR);
         return promotion;
     }
 
@@ -79,7 +83,7 @@ class PromotionLifecycleCommandHandlersTest {
         Promotion promotion = newRequestedPromotion();
         when(repository.findById(eq(promotion.getId()))).thenReturn(Optional.of(promotion));
         ApprovePromotionCommandHandler handler = new ApprovePromotionCommandHandler(repository, publisher);
-        ApprovePromotionCommand command = new ApprovePromotionCommand(promotion.getId().value(), "user-2");
+        ApprovePromotionCommand command = new ApprovePromotionCommand(promotion.getId().value(), APPROVER);
 
         // When
         handler.handle(command);
@@ -96,7 +100,22 @@ class PromotionLifecycleCommandHandlersTest {
         PromotionId promotionId = new PromotionId(PROMOTION_ID_VALUE);
         when(repository.findById(eq(promotionId))).thenReturn(Optional.empty());
         ApprovePromotionCommandHandler handler = new ApprovePromotionCommandHandler(repository, publisher);
-        ApprovePromotionCommand command = new ApprovePromotionCommand(PROMOTION_ID_VALUE, "user-2");
+        ApprovePromotionCommand command = new ApprovePromotionCommand(PROMOTION_ID_VALUE, APPROVER);
+
+        // When / Then
+        assertThrows(DomainException.class, () -> handler.handle(command));
+        verify(repository, never()).save(any());
+        verify(publisher, never()).publish(any());
+    }
+
+    @Test
+    void should_ThrowDomainException_When_NonApproverAttemptsToApprovePromotion() {
+        // Given
+        Promotion promotion = newRequestedPromotion();
+        when(repository.findById(eq(promotion.getId()))).thenReturn(Optional.of(promotion));
+        ApprovePromotionCommandHandler handler = new ApprovePromotionCommandHandler(repository, publisher);
+        User nonApprover = new User("user-3", false);
+        ApprovePromotionCommand command = new ApprovePromotionCommand(promotion.getId().value(), nonApprover);
 
         // When / Then
         assertThrows(DomainException.class, () -> handler.handle(command));
@@ -112,7 +131,7 @@ class PromotionLifecycleCommandHandlersTest {
         Promotion promotion = newApprovedPromotion();
         when(repository.findById(eq(promotion.getId()))).thenReturn(Optional.of(promotion));
         StartDeploymentCommandHandler handler = new StartDeploymentCommandHandler(repository, publisher);
-        StartDeploymentCommand command = new StartDeploymentCommand(promotion.getId().value(), "system-operator");
+        StartDeploymentCommand command = new StartDeploymentCommand(promotion.getId().value(), OPERATOR);
 
         // When
         handler.handle(command);
@@ -120,7 +139,7 @@ class PromotionLifecycleCommandHandlersTest {
         // Then
         assertEquals(PromotionStatus.DEPLOYMENT_STARTED, promotion.getStatus());
         verify(repository, times(1)).save(promotion);
-        verify(publisher, times(1)).publish(any(com.releasepilot.domain.event.DeploymentStarted.class));
+        verify(publisher, times(1)).publish(any(com.releasepilot.domain.event.PromotionStarted.class));
     }
 
     @Test
@@ -129,7 +148,7 @@ class PromotionLifecycleCommandHandlersTest {
         PromotionId promotionId = new PromotionId(PROMOTION_ID_VALUE);
         when(repository.findById(eq(promotionId))).thenReturn(Optional.empty());
         StartDeploymentCommandHandler handler = new StartDeploymentCommandHandler(repository, publisher);
-        StartDeploymentCommand command = new StartDeploymentCommand(PROMOTION_ID_VALUE, "system-operator");
+        StartDeploymentCommand command = new StartDeploymentCommand(PROMOTION_ID_VALUE, OPERATOR);
 
         // When / Then
         assertThrows(DomainException.class, () -> handler.handle(command));
@@ -145,7 +164,7 @@ class PromotionLifecycleCommandHandlersTest {
         Promotion promotion = newDeploymentStartedPromotion();
         when(repository.findById(eq(promotion.getId()))).thenReturn(Optional.of(promotion));
         CompletePromotionCommandHandler handler = new CompletePromotionCommandHandler(repository, publisher);
-        CompletePromotionCommand command = new CompletePromotionCommand(promotion.getId().value(), "system-operator");
+        CompletePromotionCommand command = new CompletePromotionCommand(promotion.getId().value(), OPERATOR);
 
         // When
         handler.handle(command);
@@ -162,7 +181,7 @@ class PromotionLifecycleCommandHandlersTest {
         PromotionId promotionId = new PromotionId(PROMOTION_ID_VALUE);
         when(repository.findById(eq(promotionId))).thenReturn(Optional.empty());
         CompletePromotionCommandHandler handler = new CompletePromotionCommandHandler(repository, publisher);
-        CompletePromotionCommand command = new CompletePromotionCommand(PROMOTION_ID_VALUE, "system-operator");
+        CompletePromotionCommand command = new CompletePromotionCommand(PROMOTION_ID_VALUE, OPERATOR);
 
         // When / Then
         assertThrows(DomainException.class, () -> handler.handle(command));
@@ -178,7 +197,7 @@ class PromotionLifecycleCommandHandlersTest {
         Promotion promotion = newRequestedPromotion();
         when(repository.findById(eq(promotion.getId()))).thenReturn(Optional.of(promotion));
         CancelPromotionCommandHandler handler = new CancelPromotionCommandHandler(repository, publisher);
-        CancelPromotionCommand command = new CancelPromotionCommand(promotion.getId().value(), "user-1", "no longer needed");
+        CancelPromotionCommand command = new CancelPromotionCommand(promotion.getId().value(), REQUESTER, "no longer needed");
 
         // When
         handler.handle(command);
@@ -195,7 +214,7 @@ class PromotionLifecycleCommandHandlersTest {
         PromotionId promotionId = new PromotionId(PROMOTION_ID_VALUE);
         when(repository.findById(eq(promotionId))).thenReturn(Optional.empty());
         CancelPromotionCommandHandler handler = new CancelPromotionCommandHandler(repository, publisher);
-        CancelPromotionCommand command = new CancelPromotionCommand(PROMOTION_ID_VALUE, "user-1", "no longer needed");
+        CancelPromotionCommand command = new CancelPromotionCommand(PROMOTION_ID_VALUE, REQUESTER, "no longer needed");
 
         // When / Then
         assertThrows(DomainException.class, () -> handler.handle(command));
@@ -211,7 +230,7 @@ class PromotionLifecycleCommandHandlersTest {
         Promotion promotion = newDeploymentStartedPromotion();
         when(repository.findById(eq(promotion.getId()))).thenReturn(Optional.of(promotion));
         RollbackPromotionCommandHandler handler = new RollbackPromotionCommandHandler(repository, publisher);
-        RollbackPromotionCommand command = new RollbackPromotionCommand(promotion.getId().value(), "system-operator", "deployment failed");
+        RollbackPromotionCommand command = new RollbackPromotionCommand(promotion.getId().value(), OPERATOR, "deployment failed");
 
         // When
         handler.handle(command);
@@ -228,7 +247,7 @@ class PromotionLifecycleCommandHandlersTest {
         PromotionId promotionId = new PromotionId(PROMOTION_ID_VALUE);
         when(repository.findById(eq(promotionId))).thenReturn(Optional.empty());
         RollbackPromotionCommandHandler handler = new RollbackPromotionCommandHandler(repository, publisher);
-        RollbackPromotionCommand command = new RollbackPromotionCommand(PROMOTION_ID_VALUE, "system-operator", "deployment failed");
+        RollbackPromotionCommand command = new RollbackPromotionCommand(PROMOTION_ID_VALUE, OPERATOR, "deployment failed");
 
         // When / Then
         assertThrows(DomainException.class, () -> handler.handle(command));

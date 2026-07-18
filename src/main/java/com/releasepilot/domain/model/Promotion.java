@@ -1,11 +1,12 @@
 package com.releasepilot.domain.model;
 
-import com.releasepilot.domain.event.DeploymentStarted;
 import com.releasepilot.domain.event.PromotionApproved;
 import com.releasepilot.domain.event.PromotionCancelled;
 import com.releasepilot.domain.event.PromotionCompleted;
+import com.releasepilot.domain.event.PromotionEvent;
 import com.releasepilot.domain.event.PromotionRequested;
 import com.releasepilot.domain.event.PromotionRolledBack;
+import com.releasepilot.domain.event.PromotionStarted;
 import com.releasepilot.domain.exception.DomainException;
 
 import java.time.Instant;
@@ -27,18 +28,18 @@ public class Promotion {
     private final Version version;
     private final Environment sourceEnvironment;
     private final Environment targetEnvironment;
-    private final String requestedBy;
+    private final User requestedBy;
 
     private PromotionStatus status;
 
-    private final List<Object> domainEvents = new ArrayList<>();
+    private final List<PromotionEvent> domainEvents = new ArrayList<>();
 
     private Promotion(PromotionId id,
                        ApplicationId applicationId,
                        Version version,
                        Environment sourceEnvironment,
                        Environment targetEnvironment,
-                       String requestedBy,
+                       User requestedBy,
                        PromotionStatus status) {
         this.id = id;
         this.applicationId = applicationId;
@@ -69,7 +70,7 @@ public class Promotion {
      * @param version                          the version of the application being promoted
      * @param source                           the source environment
      * @param target                           the target environment
-     * @param requestedBy                      the identifier of the user requesting the promotion
+     * @param requestedBy                      the user requesting the promotion
      * @param hasCompletedPreviousEnvironment  whether the version has completed the source environment
      * @param hasActivePromotionInTarget       whether an active promotion already exists for the target environment
      * @return a new {@link Promotion} instance in {@link PromotionStatus#REQUESTED} status
@@ -81,7 +82,7 @@ public class Promotion {
                                      Version version,
                                      Environment source,
                                      Environment target,
-                                     String requestedBy,
+                                     User requestedBy,
                                      boolean hasCompletedPreviousEnvironment,
                                      boolean hasActivePromotionInTarget) {
         if (!source.canTransitionTo(target)) {
@@ -113,77 +114,81 @@ public class Promotion {
     /**
      * Approves this Promotion.
      *
-     * @param approver the approver requesting to approve this promotion
+     * @param approver the user requesting to approve this promotion
      * @throws DomainException if the current status cannot transition to APPROVED,
+     *                         if the user is not authorized to approve promotions,
      *                         or if the approver is the same user who requested the promotion
      */
-    public void approve(Approver approver) {
+    public void approve(User approver) {
         if (!status.canTransitionTo(PromotionStatus.APPROVED)) {
             throw new DomainException("Cannot approve promotion. Current status is " + status);
         }
-        if (this.requestedBy.equalsIgnoreCase(approver.value())) {
+        if (!approver.isApprover()) {
+            throw new DomainException("User is not authorized to approve promotions");
+        }
+        if (this.requestedBy.id().equalsIgnoreCase(approver.id())) {
             throw new DomainException("The requester cannot approve their own promotion request.");
         }
         this.status = PromotionStatus.APPROVED;
-        this.domainEvents.add(new PromotionApproved(id.value(), approver.value(), Instant.now()));
+        this.domainEvents.add(new PromotionApproved(id.value(), approver, Instant.now()));
     }
 
     /**
      * Cancels this Promotion.
      *
-     * @param cancelledBy the identifier of the user cancelling the promotion
-     * @param reason      the reason for cancellation
+     * @param actor  the user cancelling the promotion
+     * @param reason the reason for cancellation
      * @throws DomainException if the current status cannot transition to CANCELLED
      */
-    public void cancel(String cancelledBy, String reason) {
+    public void cancel(User actor, String reason) {
         if (!status.canTransitionTo(PromotionStatus.CANCELLED)) {
             throw new DomainException("Cannot cancel promotion. Current status is " + status);
         }
         this.status = PromotionStatus.CANCELLED;
-        this.domainEvents.add(new PromotionCancelled(id.value(), cancelledBy, reason, Instant.now()));
+        this.domainEvents.add(new PromotionCancelled(id.value(), actor, reason, Instant.now()));
     }
 
     /**
      * Starts the deployment process for this Promotion.
      *
-     * @param operator the identifier of the operator starting the deployment
+     * @param actor the user starting the deployment
      * @throws DomainException if the current status cannot transition to DEPLOYMENT_STARTED
      */
-    public void startDeployment(String operator) {
+    public void startDeployment(User actor) {
         if (!status.canTransitionTo(PromotionStatus.DEPLOYMENT_STARTED)) {
             throw new DomainException("Cannot start deployment. Current status is " + status);
         }
         this.status = PromotionStatus.DEPLOYMENT_STARTED;
-        this.domainEvents.add(new DeploymentStarted(id.value(), operator, Instant.now()));
+        this.domainEvents.add(new PromotionStarted(id.value(), actor, Instant.now()));
     }
 
     /**
      * Completes the deployment process for this Promotion.
      *
-     * @param operator the identifier of the operator completing the deployment
+     * @param actor the user completing the deployment
      * @throws DomainException if the current status cannot transition to COMPLETED
      */
-    public void completeDeployment(String operator) {
+    public void completeDeployment(User actor) {
         if (!status.canTransitionTo(PromotionStatus.COMPLETED)) {
             throw new DomainException("Cannot complete deployment. Current status is " + status);
         }
         this.status = PromotionStatus.COMPLETED;
-        this.domainEvents.add(new PromotionCompleted(id.value(), operator, Instant.now()));
+        this.domainEvents.add(new PromotionCompleted(id.value(), actor, Instant.now()));
     }
 
     /**
      * Rolls back this Promotion, either due to a failed deployment or as a post-deployment reversal.
      *
-     * @param operator the identifier of the operator performing the rollback
-     * @param reason   the reason for the rollback
+     * @param actor  the user performing the rollback
+     * @param reason the reason for the rollback
      * @throws DomainException if the current status cannot transition to ROLLED_BACK
      */
-    public void rollback(String operator, String reason) {
+    public void rollback(User actor, String reason) {
         if (!status.canTransitionTo(PromotionStatus.ROLLED_BACK)) {
             throw new DomainException("Cannot rollback promotion. Current status is " + status);
         }
         this.status = PromotionStatus.ROLLED_BACK;
-        this.domainEvents.add(new PromotionRolledBack(id.value(), operator, reason, Instant.now()));
+        this.domainEvents.add(new PromotionRolledBack(id.value(), actor, reason, Instant.now()));
     }
 
     /**
@@ -191,8 +196,8 @@ public class Promotion {
      *
      * @return a copy of the recorded domain events, in the order they were recorded
      */
-    public List<Object> pullDomainEvents() {
-        List<Object> copy = new ArrayList<>(domainEvents);
+    public List<PromotionEvent> pullDomainEvents() {
+        List<PromotionEvent> copy = new ArrayList<>(domainEvents);
         domainEvents.clear();
         return copy;
     }

@@ -1,8 +1,8 @@
 package com.releasepilot.application.command;
 
-import com.releasepilot.application.event.DomainEventPublisher;
+import com.releasepilot.application.event.PromotionEventPublisher;
+import com.releasepilot.domain.event.PromotionEvent;
 import com.releasepilot.domain.exception.DomainException;
-import com.releasepilot.domain.model.Approver;
 import com.releasepilot.domain.model.Promotion;
 import com.releasepilot.domain.model.PromotionId;
 import com.releasepilot.domain.repository.PromotionRepository;
@@ -18,9 +18,9 @@ import org.springframework.stereotype.Service;
 public class ApprovePromotionCommandHandler {
 
     private final PromotionRepository repository;
-    private final DomainEventPublisher publisher;
+    private final PromotionEventPublisher publisher;
 
-    public ApprovePromotionCommandHandler(PromotionRepository repository, DomainEventPublisher publisher) {
+    public ApprovePromotionCommandHandler(PromotionRepository repository, PromotionEventPublisher publisher) {
         this.repository = repository;
         this.publisher = publisher;
     }
@@ -37,11 +37,11 @@ public class ApprovePromotionCommandHandler {
         Promotion promotion = repository.findById(promotionId)
                 .orElseThrow(() -> new DomainException("Promotion not found: " + command.promotionId()));
 
-        promotion.approve(new Approver(command.approver()));
+        promotion.approve(command.approver());
 
         repository.save(promotion);
 
-        for (Object event : promotion.pullDomainEvents()) {
+        for (PromotionEvent event : promotion.pullDomainEvents()) {
             publisher.publish(event);
         }
     }

@@ -4,6 +4,7 @@ import com.releasepilot.domain.model.ApplicationId;
 import com.releasepilot.domain.model.Environment;
 import com.releasepilot.domain.model.Promotion;
 import com.releasepilot.domain.model.PromotionId;
+import com.releasepilot.domain.model.User;
 import com.releasepilot.domain.model.Version;
 
 import java.util.Optional;
@@ -13,7 +14,7 @@ import java.util.Optional;
  *
  * <p>Implementations are responsible for providing the history checks required
  * to enforce the multi-promotion invariants declared in
- * {@link Promotion#request(ApplicationId, Version, Environment, Environment, boolean, boolean)}.</p>
+ * {@link Promotion#request(ApplicationId, Version, Environment, Environment, User, boolean, boolean)}.</p>
  */
 public interface PromotionRepository {
 
