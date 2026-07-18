@@ -211,4 +211,8 @@ public class Promotion {
     public PromotionStatus getStatus() {
         return status;
     }
+
+    public Environment getTargetEnvironment() {
+        return targetEnvironment;
+    }
 }
