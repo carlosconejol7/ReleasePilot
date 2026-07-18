@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -28,9 +29,9 @@ import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the Promotion lifecycle command handlers
- * ({@link ApprovePromotionCommandHandler}, {@link StartDeploymentCommandHandler},
- * {@link CompletePromotionCommandHandler}, {@link CancelPromotionCommandHandler},
- * and {@link RollbackPromotionCommandHandler}).
+ * ({@link RequestPromotionCommandHandler}, {@link ApprovePromotionCommandHandler},
+ * {@link StartDeploymentCommandHandler}, {@link CompletePromotionCommandHandler},
+ * {@link CancelPromotionCommandHandler}, and {@link RollbackPromotionCommandHandler}).
  *
  * <p>Each handler is verified using a real {@link Promotion} aggregate instance
  * (built via {@link Promotion#request}), so that the actual domain state machine
@@ -73,6 +74,69 @@ class PromotionLifecycleCommandHandlersTest {
         Promotion promotion = newApprovedPromotion();
         promotion.startDeployment(OPERATOR);
         return promotion;
+    }
+
+    // --- RequestPromotionCommandHandler ---
+
+    @Test
+    void should_CreateAndSavePromotion_When_CommandIsValid() {
+        // Given
+        RequestPromotionCommandHandler handler = new RequestPromotionCommandHandler(repository, publisher);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION, REQUESTER);
+        when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.PRODUCTION))).thenReturn(false);
+        when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.STAGING))).thenReturn(true);
+
+        // When
+        PromotionId promotionId = handler.handle(command);
+
+        // Then
+        assertNotNull(promotionId);
+        verify(repository, times(1)).save(any());
+        verify(publisher, times(1)).publish(any());
+    }
+
+    @Test
+    void should_PropagateException_When_TargetEnvironmentAlreadyHasActivePromotion() {
+        // Given
+        RequestPromotionCommandHandler handler = new RequestPromotionCommandHandler(repository, publisher);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, REQUESTER);
+        when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(true);
+
+        // When / Then
+        assertThrows(DomainException.class, () -> handler.handle(command));
+        verify(repository, never()).save(any());
+        verify(publisher, never()).publish(any());
+    }
+
+    @Test
+    void should_PropagateException_When_VersionHasNotCompletedSourceEnvironment() {
+        // Given
+        RequestPromotionCommandHandler handler = new RequestPromotionCommandHandler(repository, publisher);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.STAGING, Environment.PRODUCTION, REQUESTER);
+        when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.PRODUCTION))).thenReturn(false);
+        when(repository.hasVersionCompletedEnvironment(any(ApplicationId.class), any(Version.class), eq(Environment.STAGING))).thenReturn(false);
+
+        // When / Then
+        assertThrows(DomainException.class, () -> handler.handle(command));
+        verify(repository, never()).save(any());
+        verify(publisher, never()).publish(any());
+    }
+
+    @Test
+    void should_AllowPromotionFromDev_WithoutCheckingHistory() {
+        // Given
+        RequestPromotionCommandHandler handler = new RequestPromotionCommandHandler(repository, publisher);
+        RequestPromotionCommand command = new RequestPromotionCommand("app-1", "1.0.0", Environment.DEV, Environment.STAGING, REQUESTER);
+        when(repository.hasActivePromotion(any(ApplicationId.class), eq(Environment.STAGING))).thenReturn(false);
+
+        // When
+        PromotionId promotionId = handler.handle(command);
+
+        // Then
+        assertNotNull(promotionId);
+        verify(repository, times(1)).save(any());
+        verify(repository, never()).hasVersionCompletedEnvironment(any(), any(), any());
+        verify(publisher, times(1)).publish(any(com.releasepilot.domain.event.PromotionRequested.class));
     }
 
     // --- ApprovePromotionCommandHandler ---
