@@ -114,6 +114,34 @@ public class Promotion {
     }
 
     /**
+     * Reconstitutes a previously persisted Promotion from its stored state, without raising any
+     * domain events.
+     *
+     * <p>This factory exists specifically for infrastructure-layer repositories to rehydrate the
+     * aggregate from a persistence representation (e.g. a JPA entity). Unlike {@link #request},
+     * it performs no invariant checks and emits no events, since the represented state has
+     * already been validated and its events already published at the time it was first created.</p>
+     *
+     * @param id                the identifier of the promotion
+     * @param applicationId     the identifier of the application being promoted
+     * @param version           the version of the application being promoted
+     * @param sourceEnvironment the source environment of the promotion
+     * @param targetEnvironment the target environment of the promotion
+     * @param requestedBy       the user who originally requested the promotion
+     * @param status            the current status of the promotion
+     * @return a {@link Promotion} instance reflecting the given persisted state
+     */
+    public static Promotion reconstitute(PromotionId id,
+                                          ApplicationId applicationId,
+                                          Version version,
+                                          Environment sourceEnvironment,
+                                          Environment targetEnvironment,
+                                          User requestedBy,
+                                          PromotionStatus status) {
+        return new Promotion(id, applicationId, version, sourceEnvironment, targetEnvironment, requestedBy, status);
+    }
+
+    /**
      * Approves this Promotion.
      *
      * @param approver the user requesting to approve this promotion
@@ -208,11 +236,27 @@ public class Promotion {
         return id;
     }
 
-    public PromotionStatus getStatus() {
-        return status;
+    public ApplicationId getApplicationId() {
+        return applicationId;
+    }
+
+    public Version getVersion() {
+        return version;
+    }
+
+    public Environment getSourceEnvironment() {
+        return sourceEnvironment;
     }
 
     public Environment getTargetEnvironment() {
         return targetEnvironment;
+    }
+
+    public User getRequestedBy() {
+        return requestedBy;
+    }
+
+    public PromotionStatus getStatus() {
+        return status;
     }
 }
