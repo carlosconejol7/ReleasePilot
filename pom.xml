@@ -30,6 +30,7 @@
 		<java.version>21</java.version>
 		<sb.testcontainers.version>4.1.0</sb.testcontainers.version>
 		<testcontainers.version>1.21.4</testcontainers.version>
+		<awaitility.version>4.2.2</awaitility.version>
 	</properties>
 
 	<dependencies>
@@ -80,6 +81,13 @@
 			<artifactId>junit-jupiter</artifactId>
 			<version>${testcontainers.version}</version>
 			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<version>${awaitility.version}</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
