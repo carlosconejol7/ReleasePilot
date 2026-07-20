@@ -36,9 +36,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * logic of its own; it only reacts to already-validated domain events and reshapes them into
  * read models.</p>
  *
- * <p>Because projection happens asynchronously relative to the command that triggered it (the
- * command handler publishes the event and returns immediately), reads against this projector are
- * eventually consistent with the write side.</p>
+ * <p><b>Synchronous by design:</b> unlike other listeners of {@link PromotionEvent} (such as
+ * {@code PromotionProcessManager} and {@code AuditLogConsumer}, which react asynchronously),
+ * this projector deliberately runs <b>synchronously</b>, on the same thread as — and therefore
+ * before — the command handler returns its HTTP response. This is a conscious trade-off:
+ * it sacrifices a small amount of request latency in exchange for guaranteed read-after-write
+ * consistency, so that a client reading a Promotion immediately after writing to it always
+ * observes its own write.</p>
+ *
+ * <p>This trade-off is only viable because the projector currently maintains its read model
+ * in local memory. Should this projector be migrated to build a read model in an external
+ * store (e.g., Redis or Elasticsearch), synchronous projection would introduce unacceptable
+ * latency and I/O coupling into the write path; at that point, this listener should also be
+ * made asynchronous, and the read-after-write consistency guarantee explicitly relaxed to
+ * eventual consistency (as is already the case for the other, asynchronous listeners).</p>
  */
 @Component
 public class PromotionProjector {
@@ -49,6 +60,8 @@ public class PromotionProjector {
     /**
      * Handles an incoming {@link PromotionEvent}, exhaustively dispatching on its concrete type
      * via pattern matching over the sealed hierarchy.
+     *
+     * <p>Runs synchronously on the publishing thread (see class Javadoc for rationale).</p>
      *
      * @param event the domain event to project
      */
