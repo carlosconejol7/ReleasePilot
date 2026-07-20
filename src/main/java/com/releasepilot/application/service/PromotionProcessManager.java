@@ -15,6 +15,7 @@ import com.releasepilot.domain.model.Promotion;
 import com.releasepilot.domain.model.PromotionId;
 import com.releasepilot.domain.repository.PromotionRepository;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -27,6 +28,16 @@ import java.util.List;
  * state machine, free of any dependency on external systems. All cross-cutting orchestration of
  * {@link DeploymentPort}, {@link IssueTrackerPort}, and {@link NotificationPort} happens here,
  * driven exclusively by already-published domain events.</p>
+ *
+ * <p><b>Runs asynchronously:</b> event handling in this class is {@code @Async}, meaning it
+ * executes on a separate thread from the one that published the event. This ensures that the
+ * API request which triggered a Promotion state transition is never blocked waiting on
+ * potentially slow external integrations (deployment systems, issue trackers, notification
+ * channels); the HTTP response returns as soon as the aggregate has been persisted and
+ * projected, while these side effects complete independently in the background. Requires
+ * {@code @EnableAsync} to be active in the application context (see
+ * {@code com.releasepilot.infrastructure.config.AsyncConfig}) for the {@link Async} annotation
+ * to actually take effect.</p>
  */
 @Component
 public class PromotionProcessManager {
@@ -50,8 +61,12 @@ public class PromotionProcessManager {
      * Handles an incoming {@link PromotionEvent}, exhaustively dispatching on its concrete type
      * via pattern matching over the sealed hierarchy, and triggering the relevant ports.
      *
+     * <p>Runs asynchronously on a separate thread from the publishing thread (see class
+     * Javadoc for rationale).</p>
+     *
      * @param event the domain event to react to
      */
+    @Async
     @EventListener
     public void on(PromotionEvent event) {
         switch (event) {
