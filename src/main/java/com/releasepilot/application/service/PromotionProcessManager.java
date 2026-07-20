@@ -29,17 +29,17 @@ import java.util.List;
  * driven exclusively by already-published domain events.</p>
  */
 @Component
-public class PromotionWorkflowService {
+public class PromotionProcessManager {
 
     private final DeploymentPort deploymentPort;
     private final IssueTrackerPort issueTrackerPort;
     private final NotificationPort notificationPort;
     private final PromotionRepository promotionRepository;
 
-    public PromotionWorkflowService(DeploymentPort deploymentPort,
-                                     IssueTrackerPort issueTrackerPort,
-                                     NotificationPort notificationPort,
-                                     PromotionRepository promotionRepository) {
+    public PromotionProcessManager(DeploymentPort deploymentPort,
+                                   IssueTrackerPort issueTrackerPort,
+                                   NotificationPort notificationPort,
+                                   PromotionRepository promotionRepository) {
         this.deploymentPort = deploymentPort;
         this.issueTrackerPort = issueTrackerPort;
         this.notificationPort = notificationPort;

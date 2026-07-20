@@ -35,11 +35,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link PromotionWorkflowService}, verifying that the correct application
+ * Unit tests for {@link PromotionProcessManager}, verifying that the correct application
  * ports are invoked in reaction to each {@link com.releasepilot.domain.event.PromotionEvent} type.
  */
 @ExtendWith(MockitoExtension.class)
-class PromotionWorkflowServiceTest {
+class PromotionProcessManagerTest {
 
     @Mock
     private DeploymentPort deploymentPort;
@@ -60,7 +60,7 @@ class PromotionWorkflowServiceTest {
     @Test
     void should_FetchWorkItemsAndNotify_When_PromotionRequested() {
         // Given
-        PromotionWorkflowService service = new PromotionWorkflowService(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
+        PromotionProcessManager service = new PromotionProcessManager(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
         when(issueTrackerPort.getLinkedWorkItems("promotion-1")).thenReturn(List.of(new WorkItem("ISSUE-1", "Fix bug", "http://tracker/ISSUE-1")));
         PromotionRequested event = new PromotionRequested("promotion-1", "app-1", "1.0.0", Environment.DEV, Environment.STAGING, REQUESTER, Instant.now());
 
@@ -76,7 +76,7 @@ class PromotionWorkflowServiceTest {
     @Test
     void should_Notify_When_PromotionApproved() {
         // Given
-        PromotionWorkflowService service = new PromotionWorkflowService(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
+        PromotionProcessManager service = new PromotionProcessManager(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
         PromotionApproved event = new PromotionApproved("promotion-1", APPROVER, Instant.now());
 
         // When
@@ -91,7 +91,7 @@ class PromotionWorkflowServiceTest {
     @Test
     void should_TriggerDeploymentAndNotify_When_PromotionStarted() {
         // Given
-        PromotionWorkflowService service = new PromotionWorkflowService(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
+        PromotionProcessManager service = new PromotionProcessManager(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
         Promotion promotion = Promotion.request(new ApplicationId("app-1"), new Version("1.0.0"), Environment.DEV, Environment.STAGING, REQUESTER, true, false);
         when(promotionRepository.findById(new PromotionId(promotion.getId().value()))).thenReturn(Optional.of(promotion));
         PromotionStarted event = new PromotionStarted(promotion.getId().value(), OPERATOR, Instant.now());
@@ -107,7 +107,7 @@ class PromotionWorkflowServiceTest {
     @Test
     void should_NotTriggerDeployment_When_PromotionStartedButPromotionNotFound() {
         // Given
-        PromotionWorkflowService service = new PromotionWorkflowService(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
+        PromotionProcessManager service = new PromotionProcessManager(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
         when(promotionRepository.findById(any(PromotionId.class))).thenReturn(Optional.empty());
         PromotionStarted event = new PromotionStarted("unknown-promotion", OPERATOR, Instant.now());
 
@@ -122,7 +122,7 @@ class PromotionWorkflowServiceTest {
     @Test
     void should_Notify_When_PromotionCompleted() {
         // Given
-        PromotionWorkflowService service = new PromotionWorkflowService(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
+        PromotionProcessManager service = new PromotionProcessManager(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
         PromotionCompleted event = new PromotionCompleted("promotion-1", OPERATOR, Instant.now());
 
         // When
@@ -135,7 +135,7 @@ class PromotionWorkflowServiceTest {
     @Test
     void should_Notify_When_PromotionCancelled() {
         // Given
-        PromotionWorkflowService service = new PromotionWorkflowService(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
+        PromotionProcessManager service = new PromotionProcessManager(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
         PromotionCancelled event = new PromotionCancelled("promotion-1", REQUESTER, "no longer needed", Instant.now());
 
         // When
@@ -148,7 +148,7 @@ class PromotionWorkflowServiceTest {
     @Test
     void should_Notify_When_PromotionRolledBack() {
         // Given
-        PromotionWorkflowService service = new PromotionWorkflowService(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
+        PromotionProcessManager service = new PromotionProcessManager(deploymentPort, issueTrackerPort, notificationPort, promotionRepository);
         PromotionRolledBack event = new PromotionRolledBack("promotion-1", OPERATOR, "deployment failed", Instant.now());
 
         // When
