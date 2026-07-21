@@ -5,27 +5,17 @@ import com.releasepilot.application.port.IssueTrackerPort;
 import com.releasepilot.application.port.NotificationPort;
 import com.releasepilot.domain.model.Environment;
 import com.releasepilot.domain.model.User;
-import com.releasepilot.infrastructure.api.dto.ApprovePromotionRequest;
-import com.releasepilot.infrastructure.api.dto.CancelPromotionRequest;
-import com.releasepilot.infrastructure.api.dto.CompletePromotionRequest;
-import com.releasepilot.infrastructure.api.dto.PromotionIdResponse;
-import com.releasepilot.infrastructure.api.dto.RequestPromotionRequest;
-import com.releasepilot.infrastructure.api.dto.StartDeploymentRequest;
+import com.releasepilot.infrastructure.api.dto.*;
 import com.releasepilot.infrastructure.audit.AuditLogEntry;
 import com.releasepilot.infrastructure.audit.AuditLogRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
@@ -34,13 +24,8 @@ import java.util.concurrent.TimeUnit;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -64,17 +49,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * this test is wrapped in an Awaitility {@code await()} block rather than asserted immediately.</p>
  *
  * <p>This test does not assert on any read-side query endpoints or projections; that is covered
- * separately by {@link com.releasepilot.query.projection.PromotionProjectorTest} and the
+ * separately by {@link com.releasepilot.query.projection.PromotionReadSideIntegrationTest} and the
  * application controllers' own tests.</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@Testcontainers
-class PromotionSideEffectsE2ETest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"));
+class PromotionSideEffectsE2ETest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -120,7 +100,7 @@ class PromotionSideEffectsE2ETest {
 
         // Then: IssueTrackerPort was consulted for linked work items as part of PromotionProcessManager's reaction
         await().atMost(2, TimeUnit.SECONDS).untilAsserted(() ->
-                verify(issueTrackerPort, times(1)).getLinkedWorkItems(eq(promotionId)));
+                verify(issueTrackerPort, times(1)).getLinkedWorkItems(promotionId));
 
         // And: A notification was sent about the request
         await().atMost(2, TimeUnit.SECONDS).untilAsserted(() ->
@@ -155,7 +135,7 @@ class PromotionSideEffectsE2ETest {
 
         // Then: DeploymentPort was triggered for the target environment
         await().atMost(2, TimeUnit.SECONDS).untilAsserted(() ->
-                verify(deploymentPort, times(1)).triggerDeployment(eq(promotionId), eq(Environment.STAGING)));
+                verify(deploymentPort, times(1)).triggerDeployment(promotionId, Environment.STAGING));
 
         await().atMost(2, TimeUnit.SECONDS).untilAsserted(() -> {
             List<AuditLogEntry> entries = auditLogRepository.findByPromotionId(promotionId);
@@ -192,7 +172,7 @@ class PromotionSideEffectsE2ETest {
         String promotionId = requestPromotion("app-e2e-2", "1.0.0", Environment.DEV, Environment.STAGING, REQUESTER);
 
         await().atMost(2, TimeUnit.SECONDS).untilAsserted(() ->
-                verify(issueTrackerPort, times(1)).getLinkedWorkItems(eq(promotionId)));
+                verify(issueTrackerPort, times(1)).getLinkedWorkItems(promotionId));
 
         // When: Cancel
         String reason = "no longer needed";
